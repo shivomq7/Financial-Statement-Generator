@@ -1,0 +1,6 @@
+{
+  "name": "Financial Statement & Depreciation Generator",
+  "description": "An advanced financial accounting tool to build Trading & Profit & Loss Accounts, Balance Sheets, and Fixed Assets Depreciation Schedules with automatic calculations, balancing checks, and bilingual (Hindi/English) support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
