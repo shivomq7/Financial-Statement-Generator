@@ -1,7 +1,8 @@
 import { AccountingData, Language } from "../types";
 import { AccountingReport } from "../utils/accountingMath";
 import { translations } from "../utils/translations";
-import { X, Printer } from "lucide-react";
+import { X, Printer, FileDown } from "lucide-react";
+import { exportFinancialReportPDF } from "../utils/pdfGenerator";
 
 interface PrintReportProps {
   data: AccountingData;
@@ -57,6 +58,13 @@ export default function PrintReport({ data, report, language, onClose, privacyMo
             <h2 className="text-sm font-bold">{language === "en" ? "Print Preview - Audited Statements" : "प्रिंट पूर्वावलोकन - लेखा परीक्षित विवरण"}</h2>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => exportFinancialReportPDF(data, report, language, privacyMode)}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <FileDown size={14} />
+              <span>{language === "en" ? "Export PDF" : "PDF डाउनलोड"}</span>
+            </button>
             <button
               onClick={handlePrint}
               className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors shadow-sm"

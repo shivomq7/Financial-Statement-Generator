@@ -78,8 +78,11 @@ export default function App() {
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Security and Access control states
-  const [securityConfig, setSecurityConfig] = useState<SecurityConfig>(getInitialSecurityConfig());
+  // Security and Access control states (PIN protection disabled for public access)
+  const [securityConfig, setSecurityConfig] = useState<SecurityConfig>({
+    ...getInitialSecurityConfig(),
+    isEnabled: false
+  });
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [activePin, setActivePin] = useState<string>("");
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -90,11 +93,11 @@ export default function App() {
   useEffect(() => {
     // 1. Load security configuration
     const savedSec = localStorage.getItem("standard_accounting_security");
-    let activeSec = getInitialSecurityConfig();
     if (savedSec) {
       try {
-        activeSec = JSON.parse(savedSec);
-        setSecurityConfig(activeSec);
+        const activeSec = JSON.parse(savedSec);
+        // Force PIN protection disabled for seamless public usage
+        setSecurityConfig({ ...activeSec, isEnabled: false });
       } catch (err) {
         console.error("Failed to parse security configuration", err);
       }
@@ -110,94 +113,41 @@ export default function App() {
       }
     }
 
-    // 3. Load accounting ledger data
-    if (activeSec.isEnabled) {
-      setIsLocked(true);
-      setData(getClearedData()); // Do not load plaintext data until unlocked
-    } else {
-      const saved = localStorage.getItem("standard_accounting_data");
-      if (saved) {
-        try {
-          setData(JSON.parse(saved));
-        } catch (err) {
-          console.error("Failed to parse saved accounting data", err);
-          setData(initialAccountingData);
-        }
-      } else {
+    // 3. Load accounting ledger data directly (no PIN required)
+    const saved = localStorage.getItem("standard_accounting_data");
+    if (saved) {
+      try {
+        setData(JSON.parse(saved));
+      } catch (err) {
+        console.error("Failed to parse saved accounting data", err);
         setData(initialAccountingData);
       }
-      setIsLocked(false);
+    } else {
+      setData(initialAccountingData);
     }
+    setIsLocked(false);
   }, []);
 
-  // Securely save ledger to localStorage with scrambling if enabled
-  const handleDataChange = (
-    newData: AccountingData, 
-    overrideConfig?: SecurityConfig, 
-    overridePin?: string
-  ) => {
-    const activeSec = overrideConfig || securityConfig;
-    const pin = overridePin !== undefined ? overridePin : activePin;
-    
+  // Save ledger to localStorage
+  const handleDataChange = (newData: AccountingData) => {
     setData(newData);
-    
-    if (activeSec.isEnabled && pin) {
-      const rawText = JSON.stringify(newData);
-      const scrambled = encryptData(rawText, pin);
-      localStorage.setItem("scrambled_accounting_data", scrambled);
-      localStorage.removeItem("standard_accounting_data");
-    } else {
-      localStorage.setItem("standard_accounting_data", JSON.stringify(newData));
-      localStorage.removeItem("scrambled_accounting_data");
-    }
+    localStorage.setItem("standard_accounting_data", JSON.stringify(newData));
+    localStorage.removeItem("scrambled_accounting_data");
   };
 
-  // Handle successful login/unlock
+  // Handle successful unlock / unlock bypass
   const handleUnlockSuccess = (pin: string) => {
     setActivePin(pin);
     setIsLocked(false);
-    
-    const scrambled = localStorage.getItem("scrambled_accounting_data");
-    if (scrambled) {
-      try {
-        const decrypted = decryptData(scrambled, pin);
-        const parsed = JSON.parse(decrypted);
-        setData(parsed);
-      } catch (err) {
-        console.error("Failed to decrypt saved data", err);
-        triggerNotification("Decryption error: Data could be corrupt.", "error");
-      }
-    } else {
-      // If no scrambled data exists, migrate plain standard data or load initial
-      const plain = localStorage.getItem("standard_accounting_data");
-      if (plain) {
-        try {
-          const parsed = JSON.parse(plain);
-          setData(parsed);
-          // scramble it immediately
-          const scrambledData = encryptData(plain, pin);
-          localStorage.setItem("scrambled_accounting_data", scrambledData);
-          localStorage.removeItem("standard_accounting_data");
-        } catch (err) {
-          setData(initialAccountingData);
-        }
-      } else {
-        setData(initialAccountingData);
-      }
-    }
   };
 
-  // Change security settings and re-encrypt data if needed
+  // Change security settings
   const handleConfigChange = (newConfig: SecurityConfig) => {
-    localStorage.setItem("standard_accounting_security", JSON.stringify(newConfig));
-    setSecurityConfig(newConfig);
-
-    // If security is newly disabled, decrypt scrambled and save plain
-    if (!newConfig.isEnabled) {
-      setActivePin("");
-      localStorage.setItem("standard_accounting_data", JSON.stringify(data));
-      localStorage.removeItem("scrambled_accounting_data");
-    }
+    const updated = { ...newConfig, isEnabled: false };
+    localStorage.setItem("standard_accounting_security", JSON.stringify(updated));
+    setSecurityConfig(updated);
+    localStorage.setItem("standard_accounting_data", JSON.stringify(data));
+    localStorage.removeItem("scrambled_accounting_data");
   };
 
   // Audit Logs persistence

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { AccountingData, Language } from "../types";
 import { AccountingReport } from "../utils/accountingMath";
 import { translations } from "../utils/translations";
-import { Download, Printer, CheckCircle, AlertTriangle, HelpCircle, Edit } from "lucide-react";
+import { Download, Printer, CheckCircle, AlertTriangle, HelpCircle, Edit, FileDown } from "lucide-react";
+import { exportFinancialReportPDF } from "../utils/pdfGenerator";
 
 interface ReportViewerProps {
   data: AccountingData;
@@ -339,6 +340,15 @@ export default function ReportViewer({ data, report, language, onPrint, onChange
               <span>{editMode ? t.editModeOn : t.editModeOff}</span>
             </button>
           )}
+
+          <button
+            onClick={() => exportFinancialReportPDF(data, report, language, privacyMode)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer"
+            title={language === "en" ? "Export professional PDF report" : "प्रोफेशनल PDF रिपोर्ट डाउनलोड करें"}
+          >
+            <FileDown size={14} />
+            <span>{language === "en" ? "Export PDF" : "PDF डाउनलोड"}</span>
+          </button>
 
           <button
             onClick={onPrint}
